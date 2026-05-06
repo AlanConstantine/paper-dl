@@ -1,0 +1,71 @@
+# paper_dl.toml — 论文下载工具配置文件示例
+# 复制本文件为 paper_dl.toml 并按需修改
+
+[general]
+output_dir = "./papers"       # 默认输出目录
+max_results = 20              # 默认最大检索结果数
+default_sort = "relevance"    # relevance | date | citations
+
+[download]
+max_concurrent = 5            # 最大并发下载数 (1-20)
+request_delay = 1.0           # 同域名请求间隔（秒）
+connect_timeout = 10          # 连接超时（秒）
+read_timeout = 60             # 读取超时（秒）
+retry_times = 3               # 失败重试次数
+user_agent = "PaperDownloader/1.0 (research tool; mailto:your@email.com)"
+
+[sources]
+# 启用的数据源列表，注释掉某行即可禁用该数据源
+enabled = [
+    "semantic_scholar",
+    "openalex",
+    "crossref",
+    "pubmed",
+    "arxiv",
+    "core",
+    "chemrxiv",       # 化学预印本服务器，官方公开 API，免费无需注册
+]
+
+[api_keys]
+# Semantic Scholar API Key（可选，提升速率限制）
+# 申请地址: https://api.semanticscholar.org
+semantic_scholar = ""
+
+# NCBI/PubMed API Key（可选，提升速率限制）
+# 申请地址: https://www.ncbi.nlm.nih.gov/account/
+pubmed = ""
+
+# CORE API Key（必须注册获取）
+# 申请地址: https://core.ac.uk/api-keys
+core = ""
+
+# Unpaywall 邮箱标识（必填，用于礼貌性 API 访问标识）
+unpaywall_email = "your@email.com"
+
+[markitdown]
+enabled = true                # 是否启用 MarkItDown 格式转换
+save_original = true          # 是否保留原始文件（PDF/HTML）
+include_images = false        # 是否提取图片（暂未实现）
+
+[filters]
+oa_only = false               # 是否仅下载开放获取论文
+min_year = 0                  # 发表年份下限（0 表示不限）
+max_year = 0                  # 发表年份上限（0 表示不限）
+author_match_threshold = 0.0  # 作者匹配分数阈值（0.0=仅标注不过滤，建议值 0.6）
+                              # 取值范围 0.0~1.0：≥0.8 高置信，0.5~0.8 中等，<0.5 低置信
+
+# ---------------------------------------------------------------------------
+# [scihub] — Sci-Hub 下载配置（可选，默认关闭）
+#
+# ⚠️  法律提示：Sci-Hub 在美国、欧盟等地区属于版权侵权行为。
+#     在使用前请确认您所在地区的法律状况及机构网络使用政策。
+#     建议优先通过合法渠道（Unpaywall、PubMed Central 等）获取全文。
+#
+# 启用方式：
+#   1. 将 enabled 设为 true
+#   2. 安装 scidownl：pip install paper-dl[scihub]
+#   3. 如需代理，填写 proxy 地址
+# ---------------------------------------------------------------------------
+[scihub]
+enabled = false               # 默认关闭，需显式设为 true 才会启用
+proxy = ""                    # 代理地址，如 "socks5://127.0.0.1:7890" 或 "http://127.0.0.1:1080"
