@@ -72,6 +72,97 @@ enabled = [
 
 ---
 
+## 多维复合检索 ✨
+
+`paper-dl search` 支持将多个检索维度**同时组合使用**，各条件之间为 AND 关系，可精准缩小结果范围。
+
+### 支持的检索维度
+
+| 维度 | 选项 | 说明 |
+|------|------|------|
+| 关键词 | `-q / --query` | 全文/摘要关键词 |
+| 作者 | `-a / --author` | 作者姓名（支持模糊匹配评分） |
+| 标题 | `-t / --title` | 论文标题关键词 |
+| DOI | `-d / --doi` | 精确 DOI 匹配 |
+| 年份范围 | `--year-from / --year-to` | 发表年份区间（含两端） |
+| 仅开放获取 | `--oa-only` | 过滤出可免费获取全文的论文 |
+| 指定数据源 | `--source` | 逗号分隔，如 `arxiv,openalex` |
+| 排序方式 | `--sort` | `relevance`（默认）/ `date` / `citations` |
+| 作者匹配阈值 | `--min-author-score` | 配合 `-a` 使用，过滤低置信结果 |
+
+### 典型多维检索示例
+
+```bash
+# 示例 1：关键词 + 年份范围 + 仅 OA + 下载
+paper-dl search -q "solid electrolyte interface" \
+    --year-from 2020 --year-to 2024 \
+    --oa-only --download --output-dir ./sei_papers
+
+# 示例 2：作者 + 关键词 + 年份 + 作者匹配过滤 + 下载
+paper-dl search -a "John Newman" -q "electrochemical" \
+    --year-from 2015 --year-to 2023 \
+    --min-author-score 0.70 -n 50 --download
+
+# 示例 3：关键词 + 标题 + 年份 + 指定数据源 + 按引用数排序
+paper-dl search -q "transformer attention mechanism" \
+    -t "attention is all you need" \
+    --year-from 2017 \
+    --source semantic_scholar,openalex,crossref \
+    --sort citations -n 20
+
+# 示例 4：作者 + 年份 + 仅 OA + 指定化学预印本源
+paper-dl search -a "Omar Yaghi" \
+    --year-from 2022 --year-to 2024 \
+    --oa-only --source chemrxiv,openalex \
+    -n 30 --download
+
+# 示例 5：关键词 + 仅 OA + 多源并发 + 下载（最大覆盖面）
+paper-dl search -q "COVID-19 vaccine mRNA" \
+    --year-from 2020 --oa-only \
+    --source pubmed,openalex,semantic_scholar,core \
+    --sort citations -n 100 --download --output-dir ./covid_papers
+```
+
+### 各数据源的多维支持情况
+
+| 数据源 | 关键词 | 作者 | 标题 | DOI | 年份范围 | 实现方式 |
+|--------|:------:|:----:|:----:|:---:|:--------:|----------|
+| Semantic Scholar | ✅ | ✅ | ✅ | ✅ | ✅ | 多字段拼合查询 |
+| OpenAlex | ✅ | ✅ | ✅ | ✅ | ✅ | 独立 filter 参数（AND） |
+| CrossRef | ✅ | ✅ | ✅ | ✅ | ✅ | 多字段独立参数（AND） |
+| PubMed | ✅ | ✅ | ✅ | ✅ | ✅ | 结构化布尔查询（`[Field]` 标签） |
+| arXiv | ✅ | ✅ | ✅ | ✅ | ✅ | 布尔表达式（`ti: AND au:`） |
+| CORE | ✅ | ✅ | ✅ | ✅ | — | 多字段拼合查询 |
+| ChemRxiv | ✅ | ✅ | ✅ | ✅ | ✅ | 独立 filter 参数（AND） |
+
+> **说明：** CrossRef、OpenAlex、PubMed 和 arXiv 支持真正的多字段 AND 查询，精度最高；Semantic Scholar 和 CORE 对多字段条件会合并为单一文本检索，精度略低，但仍可通过**作者匹配后处理评分**二次过滤。
+
+### 多维检索的内部流程
+
+```
+输入条件（query + author + title + year + oa_only + source）
+        │
+        ▼
+  并发调用所有激活的数据源适配器（asyncio.gather）
+        │
+        ▼
+  跨源去重合并（DOI 优先，否则 title+author+year 哈希）
+        │
+        ▼
+  作者匹配评分（若指定 -a，对全部结果打分并降序排列）
+        │
+        ▼
+  --min-author-score 阈值过滤（可选）
+        │
+        ▼
+  --oa-only 过滤（可选）
+        │
+        ▼
+  max_results 截断 → 输出结果 / 触发下载
+```
+
+---
+
 ## 作者匹配度验证 ✨
 
 使用 `-a` 按作者检索时，工具会自动对每篇结果计算**作者匹配分数**（0.0 ~ 1.0），并在结果表格中以彩色显示：
